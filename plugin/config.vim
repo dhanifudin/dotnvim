@@ -9,7 +9,6 @@ endif
 
 set path+=**
 set clipboard=unnamed
-set termguicolors
 
 set cursorline
 
@@ -21,3 +20,6 @@ set hlsearch
 set ignorecase
 set smartcase
 set incsearch
+
+set autoindent
+set smartindent
