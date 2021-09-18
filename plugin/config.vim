@@ -23,3 +23,5 @@ set incsearch
 
 set autoindent
 set smartindent
+
+set foldlevelstart=99

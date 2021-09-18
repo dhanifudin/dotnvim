@@ -11,10 +11,13 @@ if exists('g:plugs["coc.nvim"]')
         \'coc-pairs',
         \'coc-phpls',
         \'coc-python',
+        \'coc-prettier',
         \'coc-snippets',
         \'coc-tsserver',
         \'coc-yaml',
-        \'coc-vetur'
+        \'coc-vetur',
+        \'https://github.com/h4kst3r/php-awesome-snippets',
+        \'https://github.com/xabikos/vscode-javascript'
         \]
 
   inoremap <silent><expr> <TAB>
