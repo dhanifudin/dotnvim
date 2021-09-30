@@ -2,7 +2,7 @@ if exists('g:plugs["coc.nvim"]')
   let g:coc_global_extensions = [
         \'coc-emmet',
         \'coc-explorer',
-        \'coc-flutter',
+        \'coc-flutter-tools',
         \'coc-git',
         \'coc-go',
         \'coc-highlight',
