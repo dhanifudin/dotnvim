@@ -25,3 +25,5 @@ set autoindent
 set smartindent
 
 set foldlevelstart=99
+
+lua require("dhanifudin")

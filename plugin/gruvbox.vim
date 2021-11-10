@@ -1,7 +1,7 @@
-if has('mac') || ($ITERM_PROFILE == 'Light')
-  set background=light
-else
+if has('mac') || ($ITERM_PROFILE == 'Dark')
   set background=dark
+else
+  set background=light
 endif
 
 try
