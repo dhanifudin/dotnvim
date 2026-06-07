@@ -17,7 +17,7 @@ return {
     config = function()
       -- Install missing parsers (async, shows progress only on first run)
       local installed = {}
-      for _, p in ipairs(require("nvim-treesitter.config").get_installed("parsers")) do
+      for _, p in ipairs(require("nvim-treesitter.info").installed_parsers()) do
         installed[p] = true
       end
       local missing = vim.tbl_filter(function(p) return not installed[p] end, parsers)
