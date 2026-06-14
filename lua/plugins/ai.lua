@@ -31,6 +31,7 @@ return {
       { "<leader>ac", function() require("sidekick.cli").toggle("claude") end,    desc = "AI open Claude" },
       { "<leader>ao", function() require("sidekick.cli").toggle("opencode") end,  desc = "AI open OpenCode" },
       { "<leader>aq", function() require("sidekick.cli").toggle("qwen") end,      desc = "AI open Qwen" },
+      { "<leader>aC", function() require("sidekick.cli").toggle("codex") end,    desc = "AI open Codex" },
     },
   },
 }
