@@ -1,3 +1,33 @@
+-- File extensions better handled by the system default app. vim.ui.open (used by
+-- oil's open_external) shells out to xdg-open, which honors the XDG MIME defaults
+-- declared in home/modules/desktop-services.nix (pdf→zathura, images→sxiv,
+-- media→mpv, office→WPS) — that config stays the single source of truth.
+local external_ext = {
+  -- documents
+  pdf = true, doc = true, docx = true, rtf = true, odt = true,
+  xls = true, xlsx = true, ods = true, ppt = true, pptx = true, odp = true,
+  -- images
+  png = true, jpg = true, jpeg = true, gif = true, webp = true, bmp = true,
+  tiff = true, svg = true, avif = true, heif = true,
+  -- audio / video
+  mp4 = true, mkv = true, webm = true, avi = true, mov = true,
+  mp3 = true, flac = true, wav = true, ogg = true, opus = true, m4a = true,
+}
+
+-- Enter on a file: open external types in their system app, otherwise open in nvim.
+local function oil_open()
+  local oil = require("oil")
+  local entry = oil.get_cursor_entry()
+  if entry and entry.type == "file" then
+    local ext = entry.name:match("%.([%w]+)$")
+    if ext and external_ext[ext:lower()] then
+      require("oil.actions").open_external.callback()
+      return
+    end
+  end
+  require("oil.actions").select.callback()
+end
+
 return {
   -- Flash.nvim - fast motion
   {
@@ -28,7 +58,7 @@ return {
         show_hidden = true,
       },
       keymaps = {
-        ["<CR>"] = "actions.select",
+        ["<CR>"] = { callback = oil_open, desc = "Open (external app for docs/media)" },
         ["-"] = "actions.parent",
         ["_"] = "actions.open_cwd",
         ["q"] = "actions.close",
@@ -39,6 +69,7 @@ return {
         ["<C-r>"] = "actions.refresh",
         ["g."] = "actions.toggle_hidden",
         ["g?"] = "actions.show_help",
+        ["gx"] = "actions.open_external",
       },
       use_default_keymaps = false,
     },
