@@ -38,4 +38,30 @@ return {
       })
     end,
   },
+
+  -- Treesitter-powered text objects (af/if function, ac/ic class).
+  -- Complements the custom iv/av variable-segment objects in util/variable_segment.lua.
+  {
+    "nvim-treesitter/nvim-treesitter-textobjects",
+    branch = "main",
+    event = { "VeryLazy", "BufReadPost", "BufNewFile" },
+    dependencies = { "nvim-treesitter/nvim-treesitter" },
+    config = function()
+      require("nvim-treesitter-textobjects").setup({
+        select = { lookahead = true },
+      })
+
+      local select = require("nvim-treesitter-textobjects.select").select_textobject
+      local map = function(lhs, query, desc)
+        vim.keymap.set({ "x", "o" }, lhs, function()
+          select(query, "textobjects")
+        end, { desc = desc })
+      end
+
+      map("af", "@function.outer", "Around function")
+      map("if", "@function.inner", "Inner function")
+      map("ac", "@class.outer",    "Around class")
+      map("ic", "@class.inner",    "Inner class")
+    end,
+  },
 }

@@ -22,7 +22,11 @@ return {
     keys = {
       {
         "<tab>",
-        function() return require("sidekick").nes_jump_or_apply() end,
+        function()
+          if not require("sidekick").nes_jump_or_apply() then
+            return "<Tab>"
+          end
+        end,
         expr = true,
         desc = "NES jump or apply",
       },

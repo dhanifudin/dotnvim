@@ -129,6 +129,25 @@ return {
     },
   },
 
+  -- Auto-install the formatters/linters that conform.nvim and nvim-lint expect
+  -- (rustfmt comes from the rustup toolchain in packages.nix, not Mason).
+  {
+    "WhoIsSethDaniel/mason-tool-installer.nvim",
+    dependencies = { "mason-org/mason.nvim" },
+    opts = {
+      ensure_installed = {
+        "prettier",
+        "stylua",
+        "eslint_d",
+        "gofumpt",
+        "goimports",
+        "php-cs-fixer",
+        "golangci-lint",
+      },
+      run_on_start = true,
+    },
+  },
+
   -- Formatting
   {
     "stevearc/conform.nvim",

@@ -74,9 +74,7 @@ return {
       { "<leader>bd", function() Snacks.bufdelete() end,         desc = "Delete buffer" },
       { "<leader>bD", function() Snacks.bufdelete.all() end,     desc = "Delete all buffers" },
 
-      -- Notifications
-      { "<leader>un", function() Snacks.notifier.show_history() end, desc = "Notification history" },
-      { "<leader>ud", function() Snacks.notifier.hide() end,         desc = "Dismiss notifications" },
+      -- Notifications: <leader>un/<leader>ud are owned by noice.lua (notifier disabled above)
 
       -- Toggles
       { "<leader>us", function() Snacks.toggle.spell() end,            desc = "Toggle spell" },
@@ -94,7 +92,6 @@ return {
 
       -- Terminal (interactive shell, separate from runner.lua task terminals)
       { "<C-\\>",     function() Snacks.terminal.toggle() end, mode = { "n", "t" }, desc = "Toggle terminal" },
-      { "<leader>rt", function() Snacks.terminal.toggle() end,                      desc = "Toggle terminal" },
       { "<leader>tt", function() Snacks.terminal.toggle() end,                      desc = "Toggle terminal" },
       { "<leader>tf", function() Snacks.terminal() end,                             desc = "Terminal (float)" },
 

@@ -2,7 +2,7 @@
 vim.api.nvim_create_autocmd("TextYankPost", {
   group = vim.api.nvim_create_augroup("yank_highlight", { clear = true }),
   callback = function()
-    vim.highlight.on_yank()
+    vim.hl.on_yank()
   end,
 })
 
@@ -34,7 +34,7 @@ local function is_ai_panel(win)
   local buf = vim.api.nvim_win_get_buf(win)
   local ft = vim.bo[buf].filetype
   local name = vim.api.nvim_buf_get_name(buf):lower()
-  local ai_filetypes = { claudecode = true, opencode = true }
+  local ai_filetypes = { claudecode = true, opencode = true, sidekick_terminal = true }
   if ai_filetypes[ft] then
     return true
   end

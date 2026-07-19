@@ -26,9 +26,16 @@ map("v", "<A-j>", ":m '>+1<cr>gv=gv", "Move selection down")
 map("v", "<A-k>", ":m '<-2<cr>gv=gv", "Move selection up")
 
 -- Diagnostics
-map("n", "[d", function() vim.diagnostic.goto_prev() end, "Prev diagnostic")
-map("n", "]d", function() vim.diagnostic.goto_next() end, "Next diagnostic")
+map("n", "[d", function() vim.diagnostic.jump({ count = -1, float = true }) end, "Prev diagnostic")
+map("n", "]d", function() vim.diagnostic.jump({ count = 1, float = true }) end, "Next diagnostic")
 map("n", "<leader>cd", function() vim.diagnostic.open_float() end, "Diagnostic float")
 
 -- Quit
 map("n", "<leader>qq", "<cmd>qa<cr>", "Quit all")
+
+-- Windows
+map("n", "<leader>wv", "<cmd>vsplit<cr>", "Split vertical")
+map("n", "<leader>ws", "<cmd>split<cr>", "Split horizontal")
+map("n", "<leader>ww", "<C-w>w", "Other window")
+map("n", "<leader>wd", "<cmd>close<cr>", "Close window")
+map("n", "<leader>w=", "<C-w>=", "Balance windows")
