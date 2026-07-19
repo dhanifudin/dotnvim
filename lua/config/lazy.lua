@@ -18,6 +18,10 @@ end
 vim.opt.rtp:prepend(lazypath)
 
 require("lazy").setup({
+  -- ~/.config/nvim is a symlink into the read-only Nix store (see neovim.nix),
+  -- so lazy.nvim can't write its lockfile there. Use stdpath("data") instead;
+  -- home-manager seeds it from the repo's tracked lazy-lock.json on activation.
+  lockfile = vim.fn.stdpath("data") .. "/lazy-lock.json",
   spec = {
     { import = "plugins" },
   },
