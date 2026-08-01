@@ -5,6 +5,7 @@
 
 local parsers = {
   "typescript", "tsx", "javascript", "vue", "php", "go", "rust",
+  "java",
   "yaml", "json", "jsonc", "html", "css", "lua", "bash", "markdown",
   "markdown_inline", "toml", "dockerfile", "vim", "vimdoc", "regex",
 }
@@ -16,13 +17,16 @@ return {
     event = { "VeryLazy", "BufReadPost", "BufNewFile" },
     config = function()
       -- Install missing parsers (async, shows progress only on first run)
+      -- nvim-treesitter main-branch (v1) API: modules .info and .install are gone;
+      -- all public functions now live on the top-level require("nvim-treesitter").
+      local ts = require("nvim-treesitter")
       local installed = {}
-      for _, p in ipairs(require("nvim-treesitter.info").installed_parsers()) do
+      for _, p in ipairs(ts.get_installed()) do
         installed[p] = true
       end
       local missing = vim.tbl_filter(function(p) return not installed[p] end, parsers)
       if #missing > 0 then
-        require("nvim-treesitter.install").install(missing)
+        ts.install(missing)
       end
 
       -- Enable highlighting + indentation per filetype via FileType autocmd

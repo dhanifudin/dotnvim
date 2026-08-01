@@ -132,6 +132,67 @@ end, {
   desc = "Run composer command from project root",
 })
 
+-- Java (single-file source launch, Java 11+)
+vim.api.nvim_create_user_command("JavaRun", function()
+  local file = vim.fn.expand("%:p")
+  if file == "" then
+    vim.notify("JavaRun: no file in current buffer", vim.log.levels.ERROR)
+    return
+  end
+  run({ vim.o.shell, vim.o.shellcmdflag, "java " .. vim.fn.shellescape(file) }, { focus = true })
+end, { desc = "Run current Java file" })
+
+-- Maven
+local maven_completions = {
+  "compile", "test", "package", "clean", "install",
+  "exec:java", "dependency:tree", "archetype:generate",
+  "test-compile", "verify",
+}
+
+vim.api.nvim_create_user_command("Maven", function(o)
+  if o.args == "" then
+    vim.notify("Maven: No arguments provided", vim.log.levels.ERROR)
+    return
+  end
+  run_in_root("mvn " .. o.args, "pom.xml", "Maven")
+end, {
+  nargs = "+",
+  complete = function(arg_lead, cmd_line)
+    if #vim.split(cmd_line, "%s+") <= 2 then
+      return vim.tbl_filter(function(c) return c:find(arg_lead, 1, true) == 1 end, maven_completions)
+    end
+  end,
+  desc = "Run Maven goal from project root",
+})
+
+-- Interactive new Maven project scaffold
+vim.api.nvim_create_user_command("MavenNew", function()
+  vim.ui.input({ prompt = "Group ID (default: com.example): " }, function(group_id)
+    if group_id == nil then return end
+    group_id = (group_id == "" and "com.example" or group_id)
+
+    vim.ui.input({ prompt = "Artifact ID (project name): " }, function(artifact_id)
+      if artifact_id == nil or artifact_id == "" then
+        vim.notify("MavenNew: artifact ID is required", vim.log.levels.ERROR)
+        return
+      end
+
+      vim.ui.input({ prompt = "Archetype (default: maven-archetype-quickstart): " }, function(archetype)
+        if archetype == nil then return end
+        archetype = (archetype == "" and "maven-archetype-quickstart" or archetype)
+
+        local cmd = string.format(
+          "mvn archetype:generate -DgroupId=%s -DartifactId=%s -DarchetypeArtifactId=%s -DinteractiveMode=false",
+          vim.fn.shellescape(group_id),
+          vim.fn.shellescape(artifact_id),
+          vim.fn.shellescape(archetype)
+        )
+        run({ vim.o.shell, vim.o.shellcmdflag, cmd }, { focus = true })
+      end)
+    end)
+  end)
+end, { desc = "Scaffold a new Maven project interactively" })
+
 -- ─── Keymaps ──────────────────────────────────────────────────────────────────
 
 -- Dispatch
@@ -172,5 +233,21 @@ vim.keymap.set("n", "<leader>rci", "<cmd>Composer install<cr>",       { desc = "
 vim.keymap.set("n", "<leader>rcu", "<cmd>Composer update<cr>",        { desc = "Composer update" })
 vim.keymap.set("n", "<leader>rct", "<cmd>Composer test<cr>",          { desc = "Composer test" })
 vim.keymap.set("n", "<leader>rcd", "<cmd>Composer dump-autoload<cr>", { desc = "Composer dump-autoload" })
+
+-- Java
+vim.keymap.set("n", "<leader>rj", "<cmd>JavaRun<cr>", { desc = "Run current Java file" })
+
+-- Maven
+vim.keymap.set("n", "<leader>rm", function()
+  vim.ui.input({ prompt = "Maven: " }, function(input)
+    if input then vim.cmd("Maven " .. input) end
+  end)
+end, { desc = "Run Maven goal" })
+
+vim.keymap.set("n", "<leader>rmn", "<cmd>MavenNew<cr>",        { desc = "Maven new project" })
+vim.keymap.set("n", "<leader>rmc", "<cmd>Maven compile<cr>",   { desc = "Maven compile" })
+vim.keymap.set("n", "<leader>rmt", "<cmd>Maven test<cr>",      { desc = "Maven test" })
+vim.keymap.set("n", "<leader>rmp", "<cmd>Maven package<cr>",   { desc = "Maven package" })
+vim.keymap.set("n", "<leader>rmi", "<cmd>Maven install<cr>",   { desc = "Maven install" })
 
 return M

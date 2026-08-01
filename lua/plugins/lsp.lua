@@ -94,6 +94,20 @@ return {
           showSuggestionsAsSnippets = true,
         },
       })
+
+      -- jdtls: Eclipse JDT Language Server for Java.
+      -- mason-lspconfig auto-enables it; this override just wires the
+      -- workspace/data directories so each Maven project gets its own
+      -- jdtls data cache (avoids cross-project symbol collisions).
+      vim.lsp.config("jdtls", {
+        settings = {
+          java = {
+            -- Let jdtls manage its own format; google-java-format runs via
+            -- conform on save so disable jdtls's built-in formatter.
+            format = { enabled = false },
+          },
+        },
+      })
     end,
   },
 
@@ -124,6 +138,7 @@ return {
         "html",
         "cssls",
         "emmet_language_server",
+        "jdtls",
       },
       automatic_enable = true,
     },
@@ -143,6 +158,7 @@ return {
         "goimports",
         "php-cs-fixer",
         "golangci-lint",
+        "google-java-format",
       },
       run_on_start = true,
     },
@@ -175,6 +191,7 @@ return {
         markdown        = { "prettier" },
         go              = { "goimports", "gofumpt" },
         rust            = { "rustfmt" },
+        java            = { "google_java_format" },
         lua             = { "stylua" },
         php             = { "php_cs_fixer" },
       },
