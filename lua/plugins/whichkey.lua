@@ -13,6 +13,7 @@ return {
         { "<leader>r", group = "runner" },
         { "<leader>rn", group = "npm" },
         { "<leader>rc", group = "composer" },
+        { "<leader>rm", group = "maven" },
         { "<leader>q", group = "quit" },
         { "<leader>m", group = "markdown" },
         { "<leader>t", group = "terminal" },
