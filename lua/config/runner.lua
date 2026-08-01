@@ -142,6 +142,44 @@ vim.api.nvim_create_user_command("JavaRun", function()
   run({ vim.o.shell, vim.o.shellcmdflag, "java " .. vim.fn.shellescape(file) }, { focus = true })
 end, { desc = "Run current Java file" })
 
+-- Maven helpers ---------------------------------------------------------------
+
+-- Return the fully-qualified class name for a .java file path.
+-- Reads the first 10 lines to find the package declaration.
+local function java_fqn(file)
+  local class = vim.fn.fnamemodify(file, ":t:r")
+  local lines = vim.fn.readfile(file, "", 10)
+  for _, line in ipairs(lines) do
+    local pkg = line:match("^%s*package%s+([%w%.]+)%s*;")
+    if pkg then return pkg .. "." .. class end
+  end
+  return class
+end
+
+-- Find the first .java file that declares a main method.
+-- Prefers the current buffer (so you run the class you're editing).
+local function detect_main_class(root)
+  -- 1. Current buffer is a Java file with a main method
+  local buf_file = vim.fn.expand("%:p")
+  if vim.bo.filetype == "java" and buf_file ~= "" then
+    local buf_lines = table.concat(vim.fn.getline(1, "$"), "\n")
+    if buf_lines:find("static%s+void%s+main") or buf_lines:find("static%s+final%s+void%s+main") then
+      return java_fqn(buf_file)
+    end
+  end
+  -- 2. Scan src/main/java for any class with a main method
+  local src = root .. "/src/main/java"
+  local files = vim.fn.globpath(src, "**/*.java", false, true)
+  for _, f in ipairs(files) do
+    local lines = vim.fn.readfile(f)
+    local content = table.concat(lines, "\n")
+    if content:find("static%s+void%s+main") then
+      return java_fqn(f)
+    end
+  end
+  return nil
+end
+
 -- Maven
 local maven_completions = {
   "compile", "test", "package", "clean", "install",
@@ -154,7 +192,26 @@ vim.api.nvim_create_user_command("Maven", function(o)
     vim.notify("Maven: No arguments provided", vim.log.levels.ERROR)
     return
   end
-  run_in_root("mvn " .. o.args, "pom.xml", "Maven")
+
+  -- Auto-detect mainClass for bare `exec:java` (no -Dexec.mainClass given).
+  -- Any other goal, or an exec:java that already carries -Dexec.mainClass,
+  -- passes through untouched.
+  local args = o.args
+  if args == "exec:java" then
+    local root = find_project_root("pom.xml")
+    if not root then
+      vim.notify("Maven exec:java: pom.xml not found", vim.log.levels.ERROR)
+      return
+    end
+    local fqn = detect_main_class(root)
+    if not fqn then
+      vim.notify("Maven exec:java: no class with main() found in src/main/java", vim.log.levels.ERROR)
+      return
+    end
+    args = string.format("-q compile exec:java -Dexec.mainClass=%s", vim.fn.shellescape(fqn))
+  end
+
+  run_in_root("mvn " .. args, "pom.xml", "Maven")
 end, {
   nargs = "+",
   complete = function(arg_lead, cmd_line)
@@ -286,5 +343,6 @@ vim.keymap.set("n", "<leader>rmc", "<cmd>Maven compile<cr>",   { desc = "Maven c
 vim.keymap.set("n", "<leader>rmt", "<cmd>Maven test<cr>",      { desc = "Maven test" })
 vim.keymap.set("n", "<leader>rmp", "<cmd>Maven package<cr>",   { desc = "Maven package" })
 vim.keymap.set("n", "<leader>rmi", "<cmd>Maven install<cr>",   { desc = "Maven install" })
+vim.keymap.set("n", "<leader>rmr", "<cmd>Maven exec:java<cr>", { desc = "Maven run (main)" })
 
 return M
