@@ -33,7 +33,9 @@ local function run(cmd, opts)
         local code = vim.v.event.status
         vim.schedule(function()
           if code == 0 then
-            term:close()
+            if not opts.keep_open then
+              term:close()
+            end
             vim.notify("✓ '" .. label .. "' completed", vim.log.levels.INFO)
           else
             vim.notify("✗ '" .. label .. "' failed (exit " .. code .. ")", vim.log.levels.ERROR)
@@ -61,13 +63,14 @@ local function find_project_root(marker)
   end
 end
 
-local function run_in_root(cmd, marker, label)
+local function run_in_root(cmd, marker, label, opts)
   local root = find_project_root(marker)
   if not root then
     vim.notify(label .. ": " .. marker .. " not found", vim.log.levels.ERROR)
     return
   end
-  run({ vim.o.shell, vim.o.shellcmdflag, cmd }, { cwd = root })
+  opts = vim.tbl_extend("force", opts or {}, { cwd = root })
+  run({ vim.o.shell, vim.o.shellcmdflag, cmd }, opts)
 end
 
 -- ─── Commands ─────────────────────────────────────────────────────────────────
@@ -139,7 +142,7 @@ vim.api.nvim_create_user_command("JavaRun", function()
     vim.notify("JavaRun: no file in current buffer", vim.log.levels.ERROR)
     return
   end
-  run({ vim.o.shell, vim.o.shellcmdflag, "java " .. vim.fn.shellescape(file) }, { focus = true })
+  run({ vim.o.shell, vim.o.shellcmdflag, "java " .. vim.fn.shellescape(file) }, { focus = true, keep_open = true })
 end, { desc = "Run current Java file" })
 
 -- Maven helpers ---------------------------------------------------------------
@@ -197,6 +200,7 @@ vim.api.nvim_create_user_command("Maven", function(o)
   -- Any other goal, or an exec:java that already carries -Dexec.mainClass,
   -- passes through untouched.
   local args = o.args
+  local run_opts = nil
   if args == "exec:java" then
     local root = find_project_root("pom.xml")
     if not root then
@@ -209,9 +213,10 @@ vim.api.nvim_create_user_command("Maven", function(o)
       return
     end
     args = string.format("-q compile exec:java -Dexec.mainClass=%s", vim.fn.shellescape(fqn))
+    run_opts = { focus = true, keep_open = true }
   end
 
-  run_in_root("mvn " .. args, "pom.xml", "Maven")
+  run_in_root("mvn " .. args, "pom.xml", "Maven", run_opts)
 end, {
   nargs = "+",
   complete = function(arg_lead, cmd_line)
