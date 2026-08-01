@@ -193,6 +193,29 @@ vim.api.nvim_create_user_command("MavenNew", function()
   end)
 end, { desc = "Scaffold a new Maven project interactively" })
 
+-- Go
+local go_completions = {
+  "run .", "build ./...", "test ./...", "test -v ./...",
+  "mod tidy", "mod download", "vet ./...",
+  "install", "clean", "generate ./...",
+}
+
+vim.api.nvim_create_user_command("Go", function(o)
+  if o.args == "" then
+    vim.notify("Go: No arguments provided", vim.log.levels.ERROR)
+    return
+  end
+  run_in_root("go " .. o.args, "go.mod", "Go")
+end, {
+  nargs = "+",
+  complete = function(arg_lead, cmd_line)
+    if #vim.split(cmd_line, "%s+") <= 2 then
+      return vim.tbl_filter(function(c) return c:find(arg_lead, 1, true) == 1 end, go_completions)
+    end
+  end,
+  desc = "Run go command from project root",
+})
+
 -- ─── Keymaps ──────────────────────────────────────────────────────────────────
 
 -- Dispatch
@@ -233,6 +256,20 @@ vim.keymap.set("n", "<leader>rci", "<cmd>Composer install<cr>",       { desc = "
 vim.keymap.set("n", "<leader>rcu", "<cmd>Composer update<cr>",        { desc = "Composer update" })
 vim.keymap.set("n", "<leader>rct", "<cmd>Composer test<cr>",          { desc = "Composer test" })
 vim.keymap.set("n", "<leader>rcd", "<cmd>Composer dump-autoload<cr>", { desc = "Composer dump-autoload" })
+
+-- Go
+vim.keymap.set("n", "<leader>rgo", function()
+  vim.ui.input({ prompt = "Go: " }, function(input)
+    if input then vim.cmd("Go " .. input) end
+  end)
+end, { desc = "Run go command" })
+
+vim.keymap.set("n", "<leader>rgor", "<cmd>Go run .<cr>",          { desc = "Go run" })
+vim.keymap.set("n", "<leader>rgob", "<cmd>Go build ./...<cr>",    { desc = "Go build" })
+vim.keymap.set("n", "<leader>rgot", "<cmd>Go test ./...<cr>",     { desc = "Go test" })
+vim.keymap.set("n", "<leader>rgoT", "<cmd>Go test -v ./...<cr>",  { desc = "Go test -v" })
+vim.keymap.set("n", "<leader>rgov", "<cmd>Go vet ./...<cr>",      { desc = "Go vet" })
+vim.keymap.set("n", "<leader>rgom", "<cmd>Go mod tidy<cr>",       { desc = "Go mod tidy" })
 
 -- Java
 vim.keymap.set("n", "<leader>rj", "<cmd>JavaRun<cr>", { desc = "Run current Java file" })
