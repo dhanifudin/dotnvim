@@ -16,18 +16,8 @@ return {
     build = ":TSUpdate",
     event = { "VeryLazy", "BufReadPost", "BufNewFile" },
     config = function()
-      -- Install missing parsers (async, shows progress only on first run)
-      -- nvim-treesitter main-branch (v1) API: modules .info and .install are gone;
-      -- all public functions now live on the top-level require("nvim-treesitter").
-      local ts = require("nvim-treesitter")
-      local installed = {}
-      for _, p in ipairs(ts.get_installed()) do
-        installed[p] = true
-      end
-      local missing = vim.tbl_filter(function(p) return not installed[p] end, parsers)
-      if #missing > 0 then
-        ts.install(missing)
-      end
+      -- Install missing parsers (async). ensure_installed skips already-installed parsers.
+      require("nvim-treesitter.install").ensure_installed(parsers)
 
       -- Enable highlighting + indentation per filetype via FileType autocmd
       -- pcall: silently skips filetypes with no available parser
