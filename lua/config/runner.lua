@@ -227,6 +227,11 @@ end, {
   desc = "Run Maven goal from project root",
 })
 
+-- Alias: compile and run the project's default main class
+vim.api.nvim_create_user_command("MavenRun", function()
+  vim.cmd("Maven exec:java")
+end, { desc = "Compile and run default main class via Maven" })
+
 -- Interactive new Maven project scaffold
 vim.api.nvim_create_user_command("MavenNew", function()
   vim.ui.input({ prompt = "Group ID (default: com.example): " }, function(group_id)
@@ -348,6 +353,6 @@ vim.keymap.set("n", "<leader>rmc", "<cmd>Maven compile<cr>",   { desc = "Maven c
 vim.keymap.set("n", "<leader>rmt", "<cmd>Maven test<cr>",      { desc = "Maven test" })
 vim.keymap.set("n", "<leader>rmp", "<cmd>Maven package<cr>",   { desc = "Maven package" })
 vim.keymap.set("n", "<leader>rmi", "<cmd>Maven install<cr>",   { desc = "Maven install" })
-vim.keymap.set("n", "<leader>rmr", "<cmd>Maven exec:java<cr>", { desc = "Maven run (main)" })
+vim.keymap.set("n", "<leader>rmr", "<cmd>MavenRun<cr>",       { desc = "Maven run (main)" })
 
 return M
