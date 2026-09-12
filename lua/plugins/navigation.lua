@@ -1,7 +1,9 @@
 -- File extensions better handled by the system default app. vim.ui.open (used by
 -- oil's open_external) shells out to xdg-open, which honors the XDG MIME defaults
--- declared in home/modules/desktop-services.nix (pdf→zathura, images→sxiv,
--- media→mpv, office→WPS) — that config stays the single source of truth.
+-- declared in home/modules/desktop-services.nix (images→sxiv, media→mpv,
+-- office→WPS) — that config stays the single source of truth. desktop-services.nix
+-- is skipped on WSL, though, so xdg-open there has no pdf default; pdf is handled
+-- directly below (zathura) so it works on every profile.
 local external_ext = {
   -- documents
   pdf = true, doc = true, docx = true, rtf = true, odt = true,
@@ -20,7 +22,13 @@ local function oil_open()
   local entry = oil.get_cursor_entry()
   if entry and entry.type == "file" then
     local ext = entry.name:match("%.([%w]+)$")
-    if ext and external_ext[ext:lower()] then
+    ext = ext and ext:lower()
+    if ext == "pdf" and vim.fn.executable("zathura") == 1 then
+      local dir = oil.get_current_dir()
+      vim.system({ "zathura", dir .. entry.name }, { detach = true })
+      return
+    end
+    if ext and external_ext[ext] then
       require("oil.actions").open_external.callback()
       return
     end
