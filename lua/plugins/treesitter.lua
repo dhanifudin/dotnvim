@@ -6,7 +6,7 @@
 local parsers = {
   "typescript", "tsx", "javascript", "vue", "php", "go", "rust",
   "java",
-  "yaml", "json", "jsonc", "html", "css", "lua", "bash", "markdown",
+  "yaml", "json", "html", "css", "lua", "bash", "markdown",
   "markdown_inline", "toml", "dockerfile", "vim", "vimdoc", "regex",
 }
 
@@ -16,8 +16,15 @@ return {
     build = ":TSUpdate",
     event = { "VeryLazy", "BufReadPost", "BufNewFile" },
     config = function()
-      -- Install missing parsers (async). ensure_installed skips already-installed parsers.
-      require("nvim-treesitter.install").ensure_installed(parsers)
+      -- Install missing parsers (async). install() already skips
+      -- already-installed parsers unless options.force is set — this
+      -- rewrite (main branch) dropped the old ensure_installed() entirely.
+      require("nvim-treesitter").install(parsers)
+
+      -- jsonc is no longer a distinct install target in this registry (only
+      -- json/json5/jsonnet) — reuse the json grammar for jsonc buffers so
+      -- highlighting still works instead of silently falling through.
+      vim.treesitter.language.register("json", "jsonc")
 
       -- Enable highlighting + indentation per filetype via FileType autocmd
       -- pcall: silently skips filetypes with no available parser
