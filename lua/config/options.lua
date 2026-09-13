@@ -1,5 +1,19 @@
 local opt = vim.opt
 
+-- WSLg should export DISPLAY=:0 for XWayland but sometimes doesn't (only
+-- WAYLAND_DISPLAY survives). GTK/Wayland apps (zathura) don't care, but
+-- Java AWT/Swing (:MavenRun on a Swing project) is X11-only and needs it.
+-- Fixed at the nvim-process level, not in shell dotfiles: :Maven/:MavenRun
+-- (config/runner.lua) spawn vim.o.shell directly (bash on this profile),
+-- which never sources zsh's .zshenv — but every child process, regardless
+-- of shell, inherits vim.env.
+if vim.fn.has("wsl") == 1 and vim.env.DISPLAY == nil then
+  vim.env.DISPLAY = ":0"
+  -- Weston's RAIL shell doesn't reparent; without this Swing windows can
+  -- render blank/gray on WSLg.
+  vim.env._JAVA_AWT_WM_NONREPARENTING = "1"
+end
+
 -- Line numbers
 opt.number = true
 opt.relativenumber = true
