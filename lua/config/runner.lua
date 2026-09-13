@@ -50,6 +50,55 @@ local function run(cmd, opts)
   end
 end
 
+-- Like run(), but tees output to a logfile and feeds it into the quickfix
+-- list via `efm` when the job exits (vim-dispatch's :Make behavior: async
+-- build, :cnext/:cprev over the errors instead of scrolling a terminal).
+local function run_and_qf(cmd, efm, opts)
+  opts = opts or {}
+  local logfile = vim.fn.tempname()
+  local wrapped = cmd .. " > " .. vim.fn.shellescape(logfile) .. " 2>&1"
+
+  local term = Snacks.terminal.open({ vim.o.shell, vim.o.shellcmdflag, wrapped }, {
+    cwd = opts.cwd,
+    start_insert = false,
+    auto_insert = false,
+    auto_close = false,
+    win = task_win,
+  })
+
+  if term and term.buf then
+    vim.api.nvim_create_autocmd("TermClose", {
+      buffer = term.buf,
+      once = true,
+      callback = function()
+        local code = vim.v.event.status
+        local lines = vim.fn.filereadable(logfile) == 1 and vim.fn.readfile(logfile) or {}
+        vim.fn.delete(logfile)
+        vim.schedule(function()
+          vim.fn.setqflist({}, " ", { title = opts.label or "Make", lines = lines, efm = efm })
+          local qflen = #vim.fn.getqflist()
+          if code == 0 then
+            term:close()
+            vim.notify(
+              "✓ Build succeeded" .. (qflen > 0 and (" (" .. qflen .. " warning(s))") or ""),
+              vim.log.levels.INFO
+            )
+            if opts.on_success then opts.on_success() end
+          else
+            vim.cmd("botright copen")
+            vim.cmd("wincmd p")
+            vim.notify("✗ Build failed (" .. qflen .. " problem(s)) — :cnext/:cprev to jump", vim.log.levels.ERROR)
+          end
+        end)
+      end,
+    })
+  end
+
+  if not opts.focus then
+    vim.cmd("wincmd p")
+  end
+end
+
 -- ─── Project Root Detection ────────────────────────────────────────────────────
 
 local function find_project_root(marker)
@@ -161,7 +210,9 @@ end
 
 -- Find the first .java file that declares a main method.
 -- Prefers the current buffer (so you run the class you're editing).
-local function detect_main_class(root)
+-- src_root defaults to root/src/main/java (Maven layout); pass an explicit
+-- one for other layouts (e.g. bare "root/src").
+local function detect_main_class(root, src_root)
   -- 1. Current buffer is a Java file with a main method
   local buf_file = vim.fn.expand("%:p")
   if vim.bo.filetype == "java" and buf_file ~= "" then
@@ -170,8 +221,8 @@ local function detect_main_class(root)
       return java_fqn(buf_file)
     end
   end
-  -- 2. Scan src/main/java for any class with a main method
-  local src = root .. "/src/main/java"
+  -- 2. Scan src_root for any class with a main method
+  local src = src_root or (root .. "/src/main/java")
   local files = vim.fn.globpath(src, "**/*.java", false, true)
   for _, f in ipairs(files) do
     local lines = vim.fn.readfile(f)
@@ -283,6 +334,87 @@ end, {
   desc = "Run go command from project root",
 })
 
+-- Make (vim-dispatch inspired) --------------------------------------------------
+
+-- Compile every .java file under src_root into build_dir with javac.
+-- Returns the shell command string; caller wires it through run_and_qf.
+local function javac_compile_cmd(src_root, build_dir)
+  return string.format(
+    "mkdir -p %s && javac -d %s $(find %s -name '*.java')",
+    vim.fn.shellescape(build_dir),
+    vim.fn.shellescape(build_dir),
+    vim.fn.shellescape(src_root)
+  )
+end
+
+-- Bare javac layout: no pom.xml/build.gradle, just a src tree.
+-- Prefers Maven-shaped "src/main/java" if present, else plain "src".
+local function bare_java_src_root(cwd)
+  if vim.fn.isdirectory(cwd .. "/src/main/java") == 1 then
+    return cwd .. "/src/main/java"
+  end
+  if vim.fn.isdirectory(cwd .. "/src") == 1 then
+    return cwd .. "/src"
+  end
+  return nil
+end
+
+vim.api.nvim_create_user_command("Make", function()
+  -- 1. Maven project: delegate to the existing, already-solid MavenRun
+  -- (compile + run + WSL DISPLAY fix) rather than guessing a Maven
+  -- errorformat for no real benefit.
+  if find_project_root("pom.xml") then
+    vim.cmd("MavenRun")
+    return
+  end
+
+  -- 2. Go project: build with quickfix (Neovim's own `go` compiler
+  -- errorformat), then run on success.
+  local go_root = find_project_root("go.mod")
+  if go_root then
+    vim.cmd("compiler go")
+    local efm = vim.o.errorformat
+    run_and_qf("go build ./...", efm, {
+      cwd = go_root,
+      label = "Go build",
+      on_success = function()
+        run({ vim.o.shell, vim.o.shellcmdflag, "go run ." }, { cwd = go_root, focus = true, keep_open = true })
+      end,
+    })
+    return
+  end
+
+  -- 3. Bare javac: no build file, just a src tree (e.g. teaching sandboxes).
+  local cwd = vim.fn.getcwd()
+  local src_root = bare_java_src_root(cwd)
+  if src_root then
+    local build_dir = cwd .. "/.build"
+    vim.cmd("compiler javac")
+    local efm = vim.o.errorformat
+    run_and_qf(javac_compile_cmd(src_root, build_dir), efm, {
+      cwd = cwd,
+      label = "javac",
+      on_success = function()
+        local fqn = detect_main_class(cwd, src_root)
+        if not fqn then
+          vim.notify("Make: no class with main() found in " .. src_root, vim.log.levels.ERROR)
+          return
+        end
+        run(
+          { vim.o.shell, vim.o.shellcmdflag, string.format("java -cp %s %s", vim.fn.shellescape(build_dir), fqn) },
+          { cwd = cwd, focus = true, keep_open = true }
+        )
+      end,
+    })
+    return
+  end
+
+  -- 4. Fallback: classic vim-dispatch :Make — async &makeprg, quickfix via
+  -- current &errorformat. No auto-run; a bare `make` isn't necessarily
+  -- "compile one program."
+  run_and_qf(vim.o.makeprg, vim.o.errorformat, { cwd = cwd, label = "Make" })
+end, { desc = "Build (+ quickfix) and run: Maven/Go/javac/makeprg, auto-detected" })
+
 -- ─── Keymaps ──────────────────────────────────────────────────────────────────
 
 -- Dispatch
@@ -354,5 +486,8 @@ vim.keymap.set("n", "<leader>rmt", "<cmd>Maven test<cr>",      { desc = "Maven t
 vim.keymap.set("n", "<leader>rmp", "<cmd>Maven package<cr>",   { desc = "Maven package" })
 vim.keymap.set("n", "<leader>rmi", "<cmd>Maven install<cr>",   { desc = "Maven install" })
 vim.keymap.set("n", "<leader>rmr", "<cmd>MavenRun<cr>",       { desc = "Maven run (main)" })
+
+-- Make
+vim.keymap.set("n", "<leader>rM", "<cmd>Make<cr>", { desc = "Build (+ quickfix) and run" })
 
 return M
