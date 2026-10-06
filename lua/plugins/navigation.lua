@@ -1,9 +1,7 @@
 -- File extensions better handled by the system default app. vim.ui.open (used by
--- oil's open_external) shells out to xdg-open, which honors the XDG MIME defaults
--- declared in home/modules/desktop-services.nix (images→sxiv, media→mpv,
--- office→WPS) — that config stays the single source of truth. desktop-services.nix
--- is skipped on WSL, though, so xdg-open there has no pdf default; pdf is handled
--- directly below (zathura) so it works on every profile.
+-- oil's open_external) shells out to xdg-open, which honors the system's XDG MIME
+-- defaults (images, media, office). xdg-open may have no pdf default (e.g. on
+-- WSL), so pdf is handled directly below (zathura) to work everywhere.
 local external_ext = {
   -- documents
   pdf = true, doc = true, docx = true, rtf = true, odt = true,
