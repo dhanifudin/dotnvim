@@ -2,6 +2,18 @@
 
 Neovim configuration (lazy.nvim + Mason). Works with or without Nix.
 
+## Profiles
+
+| Profile | When | Includes |
+|---|---|---|
+| **full** | default on Linux, WSL, macOS (and Nix) | everything: treesitter, LSP/Mason, completion, formatting/linting, markdown rendering, git, noice, trouble, tmux integration, build runner (`:Make`, `:Maven`, ...) |
+| **minimal** | default on native Windows, or `DOTNVIM_MINIMAL=1` on any OS | simple editing and AI CLIs only: oil, flash, telescope (Lua sorter), which-key, statusline, mini.pairs/surround, snacks, sidekick (`<leader>a*`) |
+
+The minimal profile skips everything that leans on Unix tooling (treesitter parsers,
+Mason servers, native builds, the runner) and keeps its lockfile in `stdpath("data")`.
+Select it with `vim.g.dotnvim_minimal`, set in `init.lua` (e.g. `DOTNVIM_MINIMAL=1 nvim`).
+Which plugin files each profile loads is listed in `lua/config/lazy.lua`.
+
 ## Without Nix
 
 Prerequisites: Neovim >= 0.11, git, ripgrep, fd, gcc, node/npm, tree-sitter CLI, unzip.
@@ -29,8 +41,7 @@ git clone https://github.com/dhanifudin/dotnvim $env:LOCALAPPDATA\nvim
 nvim
 ```
 
-Plugins live in `%LOCALAPPDATA%\nvim-data`. Set `DOTNVIM_MINIMAL=1` to use the same
-minimal profile on any other OS.
+Plugins live in `%LOCALAPPDATA%\nvim-data`. See [Profiles](#profiles).
 
 ## With Nix (home-manager)
 
