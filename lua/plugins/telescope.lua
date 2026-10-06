@@ -4,7 +4,13 @@ return {
     cmd = "Telescope",
     dependencies = {
       "nvim-lua/plenary.nvim",
-      { "nvim-telescope/telescope-fzf-native.nvim", build = "make" },
+      {
+        "nvim-telescope/telescope-fzf-native.nvim",
+        -- needs make+gcc on Unix, cmake on Windows; telescope works without it
+        build = vim.fn.has("win32") == 1
+            and "cmake -S. -Bbuild -DCMAKE_BUILD_TYPE=Release && cmake --build build --config Release"
+          or "make",
+      },
     },
     keys = {
       { "<leader><leader>", "<cmd>Telescope find_files<cr>", desc = "Find files" },
@@ -22,7 +28,7 @@ return {
       local telescope = require("telescope")
       telescope.setup({
         defaults = {
-          file_ignore_patterns = { "node_modules", ".git/", "dist/", "build/" },
+          file_ignore_patterns = { "node_modules", "%.git[/\\]", "dist[/\\]", "build[/\\]" },
           layout_strategy = "horizontal",
           layout_config = { prompt_position = "top" },
           sorting_strategy = "ascending",

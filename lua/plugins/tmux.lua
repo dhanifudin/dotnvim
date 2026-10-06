@@ -1,6 +1,7 @@
 return {
   {
     "aserowy/tmux.nvim",
+    cond = vim.fn.has("win32") == 0, -- no tmux on native Windows
     event = "VeryLazy",
     keys = {
       { "<C-h>", "<cmd>lua require('tmux').move_left()<cr>", desc = "Move to left pane" },

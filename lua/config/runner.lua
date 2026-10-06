@@ -4,6 +4,16 @@
 
 local M = {}
 
+-- argv that runs `cmd` through the user's shell. Split shellcmdflag so
+-- multi-word flags (cmd.exe "/s /c", pwsh "-NoLogo ... -Command") become
+-- separate args; bash's "-c" is unchanged.
+local function shell_argv(cmd)
+  local argv = { vim.o.shell }
+  vim.list_extend(argv, vim.split(vim.o.shellcmdflag, "%s+", { trimempty = true }))
+  table.insert(argv, cmd)
+  return argv
+end
+
 -- ─── Task Win Config ──────────────────────────────────────────────────────────
 
 local task_win = {
@@ -58,7 +68,7 @@ local function run_and_qf(cmd, efm, opts)
   local logfile = vim.fn.tempname()
   local wrapped = cmd .. " > " .. vim.fn.shellescape(logfile) .. " 2>&1"
 
-  local term = Snacks.terminal.open({ vim.o.shell, vim.o.shellcmdflag, wrapped }, {
+  local term = Snacks.terminal.open(shell_argv(wrapped), {
     cwd = opts.cwd,
     start_insert = false,
     auto_insert = false,
@@ -119,7 +129,7 @@ local function run_in_root(cmd, marker, label, opts)
     return
   end
   opts = vim.tbl_extend("force", opts or {}, { cwd = root })
-  run({ vim.o.shell, vim.o.shellcmdflag, cmd }, opts)
+  run(shell_argv(cmd), opts)
 end
 
 -- ─── Commands ─────────────────────────────────────────────────────────────────
@@ -129,7 +139,7 @@ vim.api.nvim_create_user_command("Dispatch", function(o)
     vim.notify("Dispatch: No command provided", vim.log.levels.ERROR)
     return
   end
-  run({ vim.o.shell, vim.o.shellcmdflag, o.args })
+  run(shell_argv(o.args))
 end, { nargs = "+", complete = "shellcmd", desc = "Run command in terminal" })
 
 vim.api.nvim_create_user_command("DispatchFocus", function(o)
@@ -137,7 +147,7 @@ vim.api.nvim_create_user_command("DispatchFocus", function(o)
     vim.notify("Dispatch: No command provided", vim.log.levels.ERROR)
     return
   end
-  run({ vim.o.shell, vim.o.shellcmdflag, o.args }, { focus = true })
+  run(shell_argv(o.args), { focus = true })
 end, { nargs = "+", complete = "shellcmd", desc = "Run command in terminal (focused)" })
 
 -- Npm
@@ -191,7 +201,7 @@ vim.api.nvim_create_user_command("JavaRun", function()
     vim.notify("JavaRun: no file in current buffer", vim.log.levels.ERROR)
     return
   end
-  run({ vim.o.shell, vim.o.shellcmdflag, "java " .. vim.fn.shellescape(file) }, { focus = true, keep_open = true })
+  run(shell_argv("java " .. vim.fn.shellescape(file)), { focus = true, keep_open = true })
 end, { desc = "Run current Java file" })
 
 -- Maven helpers ---------------------------------------------------------------
@@ -305,7 +315,7 @@ vim.api.nvim_create_user_command("MavenNew", function()
           vim.fn.shellescape(artifact_id),
           vim.fn.shellescape(archetype)
         )
-        run({ vim.o.shell, vim.o.shellcmdflag, cmd }, { focus = true })
+        run(shell_argv(cmd), { focus = true })
       end)
     end)
   end)
@@ -337,14 +347,24 @@ end, {
 -- Make (vim-dispatch inspired) --------------------------------------------------
 
 -- Compile every .java file under src_root into build_dir with javac.
--- Returns the shell command string; caller wires it through run_and_qf.
+-- Sources go through a javac @argfile (no sh `find`/`$(...)`/`mkdir -p`), so
+-- this works on cmd/pwsh too. Returns the command string for run_and_qf, or
+-- nil when there are no sources.
 local function javac_compile_cmd(src_root, build_dir)
-  return string.format(
-    "mkdir -p %s && javac -d %s $(find %s -name '*.java')",
-    vim.fn.shellescape(build_dir),
-    vim.fn.shellescape(build_dir),
-    vim.fn.shellescape(src_root)
-  )
+  local sources = vim.fn.globpath(src_root, "**/*.java", false, true)
+  if #sources == 0 then
+    vim.notify("Make: no .java files under " .. src_root, vim.log.levels.ERROR)
+    return nil
+  end
+  vim.fn.mkdir(build_dir, "p")
+  local argfile = build_dir .. "/sources.txt"
+  local lines = {}
+  for _, f in ipairs(sources) do
+    -- argfile entries are quoted; backslashes would act as escapes
+    table.insert(lines, '"' .. f:gsub("\\", "/") .. '"')
+  end
+  vim.fn.writefile(lines, argfile)
+  return string.format("javac -d %s @%s", vim.fn.shellescape(build_dir), vim.fn.shellescape(argfile))
 end
 
 -- Bare javac layout: no pom.xml/build.gradle, just a src tree.
@@ -378,7 +398,7 @@ vim.api.nvim_create_user_command("Make", function()
       cwd = go_root,
       label = "Go build",
       on_success = function()
-        run({ vim.o.shell, vim.o.shellcmdflag, "go run ." }, { cwd = go_root, focus = true, keep_open = true })
+        run(shell_argv("go run ."), { cwd = go_root, focus = true, keep_open = true })
       end,
     })
     return
@@ -391,7 +411,9 @@ vim.api.nvim_create_user_command("Make", function()
     local build_dir = cwd .. "/.build"
     vim.cmd("compiler javac")
     local efm = vim.o.errorformat
-    run_and_qf(javac_compile_cmd(src_root, build_dir), efm, {
+    local compile_cmd = javac_compile_cmd(src_root, build_dir)
+    if not compile_cmd then return end
+    run_and_qf(compile_cmd, efm, {
       cwd = cwd,
       label = "javac",
       on_success = function()
@@ -401,7 +423,7 @@ vim.api.nvim_create_user_command("Make", function()
           return
         end
         run(
-          { vim.o.shell, vim.o.shellcmdflag, string.format("java -cp %s %s", vim.fn.shellescape(build_dir), fqn) },
+          shell_argv(string.format("java -cp %s %s", vim.fn.shellescape(build_dir), fqn)),
           { cwd = cwd, focus = true, keep_open = true }
         )
       end,
@@ -412,6 +434,10 @@ vim.api.nvim_create_user_command("Make", function()
   -- 4. Fallback: classic vim-dispatch :Make — async &makeprg, quickfix via
   -- current &errorformat. No auto-run; a bare `make` isn't necessarily
   -- "compile one program."
+  if vim.fn.executable(vim.split(vim.o.makeprg, "%s+")[1]) == 0 then
+    vim.notify("Make: no build system detected (and `" .. vim.o.makeprg .. "` not found)", vim.log.levels.ERROR)
+    return
+  end
   run_and_qf(vim.o.makeprg, vim.o.errorformat, { cwd = cwd, label = "Make" })
 end, { desc = "Build (+ quickfix) and run: Maven/Go/javac/makeprg, auto-detected" })
 
@@ -420,13 +446,13 @@ end, { desc = "Build (+ quickfix) and run: Maven/Go/javac/makeprg, auto-detected
 -- Dispatch
 vim.keymap.set("n", "<leader>rd", function()
   vim.ui.input({ prompt = "Dispatch: " }, function(input)
-    if input then run({ vim.o.shell, vim.o.shellcmdflag, input }) end
+    if input then run(shell_argv(input)) end
   end)
 end, { desc = "Run dispatch command" })
 
 vim.keymap.set("n", "<leader>rf", function()
   vim.ui.input({ prompt = "Dispatch (focus): " }, function(input)
-    if input then run({ vim.o.shell, vim.o.shellcmdflag, input }, { focus = true }) end
+    if input then run(shell_argv(input), { focus = true }) end
   end)
 end, { desc = "Run dispatch command (focus)" })
 

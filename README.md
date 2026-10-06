@@ -15,6 +15,23 @@ nvim   # lazy.nvim bootstraps and installs plugins on first start
 
 The lockfile (`lazy-lock.json`) lives in the repo, so `:Lazy update` changes it in place.
 
+## Windows (native)
+
+Uses PowerShell 7 (`pwsh`) as the shell when installed, otherwise cmd.exe.
+
+```powershell
+winget install Neovim.Neovim Git.Git Microsoft.PowerShell BurntSushi.ripgrep.MSVC sharkdp.fd `
+  OpenJS.NodeJS.LTS Kitware.CMake zig.zig
+npm install -g tree-sitter-cli
+# optional: JesseDuffield.lazygit, a JDK + Maven (Java runner)
+
+git clone https://github.com/dhanifudin/dotnvim $env:LOCALAPPDATA\nvim
+nvim
+```
+
+Notes: the C compiler (zig/gcc/MSVC) is needed for treesitter parsers, and cmake builds
+telescope-fzf-native. tmux integration is disabled. Plugins live in `%LOCALAPPDATA%\nvim-data`.
+
 ## With Nix (home-manager)
 
 ```nix

@@ -24,7 +24,7 @@ return {
   {
     "iamcco/markdown-preview.nvim",
     ft = { "markdown" },
-    build = function() vim.fn.jobstart({ "npm", "install" }, { cwd = vim.fn.stdpath("data") .. "/lazy/markdown-preview.nvim/app" }) end,
+    build = function() vim.fn["mkdp#util#install"]() end,
     keys = {
       { "<leader>mp", "<cmd>MarkdownPreviewToggle<cr>", ft = "markdown", desc = "Markdown preview toggle" },
     },
