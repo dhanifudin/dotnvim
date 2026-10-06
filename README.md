@@ -15,22 +15,22 @@ nvim   # lazy.nvim bootstraps and installs plugins on first start
 
 The lockfile (`lazy-lock.json`) lives in the repo, so `:Lazy update` changes it in place.
 
-## Windows (native)
+## Windows (minimal)
 
-Uses PowerShell 7 (`pwsh`) as the shell when installed, otherwise cmd.exe.
+On native Windows the config runs a minimal profile meant for simple edits and calling AI
+CLIs (sidekick). It skips everything that leans on Unix tooling: treesitter, LSP/Mason,
+completion, markdown rendering, the build runner and native plugin builds. It still has
+oil, flash, telescope (Lua sorter), which-key, the statusline and the AI CLI toggles
+(`<leader>a*`). `pwsh` is used as the shell when installed, otherwise cmd.exe.
 
 ```powershell
-winget install Neovim.Neovim Git.Git Microsoft.PowerShell BurntSushi.ripgrep.MSVC sharkdp.fd `
-  OpenJS.NodeJS.LTS Kitware.CMake zig.zig
-npm install -g tree-sitter-cli
-# optional: JesseDuffield.lazygit, a JDK + Maven (Java runner)
-
+winget install Neovim.Neovim Git.Git Microsoft.PowerShell BurntSushi.ripgrep.MSVC sharkdp.fd
 git clone https://github.com/dhanifudin/dotnvim $env:LOCALAPPDATA\nvim
 nvim
 ```
 
-Notes: the C compiler (zig/gcc/MSVC) is needed for treesitter parsers, and cmake builds
-telescope-fzf-native. tmux integration is disabled. Plugins live in `%LOCALAPPDATA%\nvim-data`.
+Plugins live in `%LOCALAPPDATA%\nvim-data`. Set `DOTNVIM_MINIMAL=1` to use the same
+minimal profile on any other OS.
 
 ## With Nix (home-manager)
 

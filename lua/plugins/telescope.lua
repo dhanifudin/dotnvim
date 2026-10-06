@@ -6,10 +6,9 @@ return {
       "nvim-lua/plenary.nvim",
       {
         "nvim-telescope/telescope-fzf-native.nvim",
-        -- needs make+gcc on Unix, cmake on Windows; telescope works without it
-        build = vim.fn.has("win32") == 1
-            and "cmake -S. -Bbuild -DCMAKE_BUILD_TYPE=Release && cmake --build build --config Release"
-          or "make",
+        -- needs make+gcc; skipped in the minimal profile (Lua sorter is used)
+        build = "make",
+        cond = not vim.g.dotnvim_minimal,
       },
     },
     keys = {

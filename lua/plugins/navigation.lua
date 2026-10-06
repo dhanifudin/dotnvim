@@ -40,12 +40,20 @@ return {
     "folke/flash.nvim",
     event = "VeryLazy",
     opts = {},
-    keys = {
-      { "s", function() require("flash").jump() end, mode = { "n", "x", "o" }, desc = "Flash jump" },
-      { "S", function() require("flash").treesitter() end, mode = { "n", "o" }, desc = "Flash treesitter" },
-      { "r", function() require("flash").remote() end, mode = "o", desc = "Flash remote" },
-      { "R", function() require("flash").treesitter_search() end, mode = { "o", "x" }, desc = "Flash treesitter search" },
-    },
+    keys = function()
+      local keys = {
+        { "s", function() require("flash").jump() end, mode = { "n", "x", "o" }, desc = "Flash jump" },
+        { "r", function() require("flash").remote() end, mode = "o", desc = "Flash remote" },
+      }
+      -- treesitter-based motions need parsers; absent in the minimal profile
+      if not vim.g.dotnvim_minimal then
+        vim.list_extend(keys, {
+          { "S", function() require("flash").treesitter() end, mode = { "n", "o" }, desc = "Flash treesitter" },
+          { "R", function() require("flash").treesitter_search() end, mode = { "o", "x" }, desc = "Flash treesitter search" },
+        })
+      end
+      return keys
+    end,
   },
 
   -- Oil.nvim - file explorer as buffer
